@@ -1,0 +1,220 @@
+# FinTech Cybersecurity & Consumer Trust - research platform
+#   docker compose up --build
+# JupyterLab  http://localhost:8888  (token: $JUPYTER_TOKEN)
+# Grafana     http://localhost:3000  (admin / $GRAFANA_ADMIN_PASSWORD)
+# Prometheus  http://localhost:9090
+# All values have working defaults, so no .env is required for a first run.
+
+name: fintech-research
+
+x-python-env: &python-env
+  DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fintech}:${POSTGRES_PASSWORD:-change_me_postgres}@postgres:5432/${POSTGRES_DB:-fintech_research}
+  SURVEY_SALT: ${SURVEY_SALT:-change_me_survey_salt}
+  FORCE_RETRAIN: ${FORCE_RETRAIN:-0}
+  EXPORTER_PORT: "8000"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fintech-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fintech}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-fintech_research}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/migrations/002_latest_run_views.sql:/docker-entrypoint-initdb.d/02_views.sql:ro
+      - ./database/seed_data/reference_risk_tiers.sql:/docker-entrypoint-initdb.d/03_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [fintech-net]
+
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.worker
+    container_name: fintech-worker
+    restart: unless-stopped
+    environment: *python-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${EXPORTER_PORT:-8000}:8000"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./report:/app/report
+      - ./survey:/app/survey
+      - ./config:/app/config:ro
+      - app_logs:/app/logs
+    healthcheck:   # healthy only after the pipeline finished and fintech_pipeline_ready == 1
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if b'fintech_pipeline_ready 1.0' in urllib.request.urlopen('http://localhost:8000/metrics').read() else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 120
+      start_period: 30s
+    networks: [fintech-net]
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.jupyter
+    container_name: fintech-jupyter
+    restart: unless-stopped
+    environment:
+      <<: *python-env
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-change_me_jupyter}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      worker:
+        condition: service_healthy     # notebooks need the processed data and models
+    ports:
+      - "127.0.0.1:${JUPYTER_PORT:-8888}:8888"
+    volumes:
+      - ./:/app
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/api/status')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [fintech-net]
+
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    container_name: fintech-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./dashboard/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./dashboard/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [fintech-net]
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: fintech-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yaml
+    ports:
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./infrastructure/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks: [fintech-net]
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: fintech-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    depends_on:
+      loki:
+        condition: service_healthy
+    volumes:
+      - ./infrastructure/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - app_logs:/var/log/fintech:ro
+      - promtail_positions:/positions
+    networks: [fintech-net]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: fintech-cadvisor
+    restart: unless-stopped
+    privileged: true
+    command: ["--docker_only=true", "--housekeeping_interval=10s", "--store_container_labels=false", "--whitelisted_container_labels=com.docker.compose.service"]
+    devices:
+      - /dev/kmsg
+    ports:
+      - "127.0.0.1:${CADVISOR_PORT:-8081}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks: [fintech-net]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: fintech-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me_grafana}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/fintech_overview.json
+      GF_UNIFIED_ALERTING_ENABLED: "true"
+      GF_LOG_MODE: console
+      # referenced by provisioning/datasources/datasource.yml
+      POSTGRES_USER: ${POSTGRES_USER:-fintech}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-fintech_research}
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./dashboard/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./dashboard/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./dashboard/grafana/alerts/alert-rules.yml:/etc/grafana/provisioning/alerting/alert-rules.yml:ro
+      - ./dashboard/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks: [fintech-net]
+
+networks:
+  fintech-net:
+    name: fintech-net
+    driver: bridge
+
+volumes:
+  pgdata:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+  app_logs:
+  promtail_positions:

@@ -1,0 +1,56 @@
+# Prometheus alerting/recording rules. Alertmanager is intentionally not deployed (lab setup):
+# alerts are visible in the Prometheus UI (/alerts) and mirrored by Grafana alert rules.
+groups:
+  - name: fintech-pipeline
+    rules:
+      - alert: WorkerDown
+        expr: up{job="worker"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "Research worker is not exporting metrics"}
+
+      - alert: PipelineStageFailed
+        expr: fintech_pipeline_stage_success == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "Pipeline stage {{ $labels.stage }} failed"}
+
+      - alert: DataValidationFailing
+        expr: fintech_data_validation_pass_rate < 0.7
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Less than 70% of data validation checks pass"}
+
+      - alert: DatabaseWriteFailures
+        expr: increase(fintech_db_write_failures_total[15m]) > 0
+        labels: {severity: warning}
+        annotations: {summary: "PostgreSQL writes are failing for table {{ $labels.table }}"}
+
+  - name: fintech-models
+    rules:
+      - record: fintech:stream_recall:ratio_rate10m
+        expr: |
+          sum(increase(fintech_stream_outcomes_total{outcome="tp"}[10m]))
+          / clamp_min(sum(increase(fintech_stream_outcomes_total{outcome=~"tp|fn"}[10m])), 1)
+      - record: fintech:stream_precision:ratio_rate10m
+        expr: |
+          sum(increase(fintech_stream_outcomes_total{outcome="tp"}[10m]))
+          / clamp_min(sum(increase(fintech_stream_outcomes_total{outcome=~"tp|fp"}[10m])), 1)
+      - alert: LiveRecallDegraded
+        expr: fintech:stream_recall:ratio_rate10m < 0.5
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Live fraud recall dropped below 50%"}
+
+  - name: fintech-infrastructure
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Scrape target {{ $labels.job }} is down"}
+      - alert: ContainerHighMemory
+        expr: container_memory_working_set_bytes{name=~"fintech-.+"} > 3e9
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Container {{ $labels.name }} uses more than 3 GB"}

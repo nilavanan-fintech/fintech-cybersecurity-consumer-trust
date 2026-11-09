@@ -1,0 +1,8 @@
+{
+  "tests": "VERIFIED",
+  "tests_detail": "23 passed (pytest, inside the worker Docker image)",
+  "notebooks": "VERIFIED",
+  "notebooks_detail": "16 of 16 executed without errors in the container; outputs stored",
+  "stack": "NOT VERIFIED",
+  "dashboards_viewed": "NOT VERIFIED"
+}

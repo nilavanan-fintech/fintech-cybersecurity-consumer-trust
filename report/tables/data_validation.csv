@@ -1,0 +1,14 @@
+check,passed,failed_count,total,detail
+schema_columns_present,True,0,16,
+min_rows,True,0,1,rows=60120
+missing_ratio_within_limit,True,0,1,0.4025%
+no_missing_amount,False,242,60120,
+duplicate_ratio_within_limit,True,0,1,0.1996%
+no_duplicate_transaction_id,False,120,60120,
+amount_positive,False,78,60120,
+timestamp_parsable,True,0,60120,
+ip_risk_in_unit_interval,True,0,60120,
+label_is_binary,True,0,60120,
+channel_domain,True,0,60120,
+merchant_domain,True,0,60120,
+auth_method_domain,True,0,60120,

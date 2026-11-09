@@ -1,0 +1,5 @@
+tier,transactions,frauds,amount,observed_fraud_rate,action
+low,3,0,514.2,0.0,allow
+medium,7871,37,533729.42,0.004700800406555711,step-up authentication
+high,912,12,91560.36,0.013157894736842105,hold for manual review
+critical,167,125,34054.96,0.7485029940119761,block + alert

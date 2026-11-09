@@ -1,0 +1,5 @@
+,coef,std_err,t,p_value
+intercept,56.5704,0.7306,77.4297,0.0
+uses_mfa,4.6176,0.7941,5.8151,0.0
+experienced_fraud,-4.0084,0.7306,-5.4864,0.0
+digital_literacy,6.6504,0.7941,8.375,0.0

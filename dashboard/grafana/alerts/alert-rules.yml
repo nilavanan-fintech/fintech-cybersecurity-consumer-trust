@@ -1,0 +1,137 @@
+# Grafana-managed alert rules (file-provisioned). No contact point is configured by default:
+# firing alerts are visible under Alerting -> Alert rules and in the default notification policy.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: fintech-research
+    folder: FinTech Research
+    interval: 1m
+    rules:
+      - uid: fintech-live-recall-low
+        title: Live fraud recall below 50%
+        condition: C
+        for: 3m
+        noDataState: OK
+        execErrState: OK
+        labels: {severity: warning, area: ml}
+        annotations:
+          summary: The champion model is catching fewer than half of replayed frauds.
+        data:
+          - refId: A
+            relativeTimeRange: {from: 900, to: 0}
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: sum(increase(fintech_stream_outcomes_total{outcome="tp"}[10m])) / clamp_min(sum(increase(fintech_stream_outcomes_total{outcome=~"tp|fn"}[10m])), 1)
+          - refId: B
+            datasourceUid: __expr__
+            model: {refId: B, type: reduce, expression: A, reducer: last}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{evaluator: {type: lt, params: [0.5]}}]
+
+      - uid: fintech-fraud-rate-high
+        title: Dataset fraud rate above 6%
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: OK
+        labels: {severity: critical, area: fraud}
+        annotations:
+          summary: Labelled fraud rate exceeds the 6% operational limit.
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model: {refId: A, instant: true, expr: fintech_txn_dataset_fraud_rate}
+          - refId: B
+            datasourceUid: __expr__
+            model: {refId: B, type: reduce, expression: A, reducer: last}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{evaluator: {type: gt, params: [0.06]}}]
+
+      - uid: fintech-pipeline-stage-failed
+        title: Pipeline stage failed
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: OK
+        labels: {severity: critical, area: pipeline}
+        annotations:
+          summary: At least one pipeline stage reported failure; see Loki logs.
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model: {refId: A, instant: true, expr: count(fintech_pipeline_stage_success == 0) or vector(0)}
+          - refId: B
+            datasourceUid: __expr__
+            model: {refId: B, type: reduce, expression: A, reducer: last}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{evaluator: {type: gt, params: [0]}}]
+
+      - uid: fintech-security-anomaly-surge
+        title: Security anomaly surge
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: OK
+        labels: {severity: warning, area: security}
+        annotations:
+          summary: Isolation Forest is flagging more than 2 anomalous security events per second.
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model: {refId: A, instant: true, expr: "rate(fintech_stream_security_anomalies_total[2m])"}
+          - refId: B
+            datasourceUid: __expr__
+            model: {refId: B, type: reduce, expression: A, reducer: last}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{evaluator: {type: gt, params: [2]}}]
+
+      - uid: fintech-trust-index-low
+        title: Consumer Trust Index below 50
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: OK
+        labels: {severity: warning, area: trust}
+        annotations:
+          summary: Combined trust index fell below the Moderate-trust boundary.
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model: {refId: A, instant: true, expr: fintech_trust_consumer_trust_index}
+          - refId: B
+            datasourceUid: __expr__
+            model: {refId: B, type: reduce, expression: A, reducer: last}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{evaluator: {type: lt, params: [50]}}]

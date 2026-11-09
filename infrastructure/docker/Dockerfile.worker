@@ -1,0 +1,27 @@
+# Research pipeline + Prometheus exporter (build context: repository root)
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DEFAULT_TIMEOUT=180 \
+    PIP_RETRIES=10 \
+    PYTHONPATH=/app \
+    FINTECH_ROOT=/app \
+    FINTECH_LOG_DIR=/app/logs
+
+# libgomp is required by xgboost / scikit-learn OpenMP
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY src ./src
+COPY config ./config
+COPY database ./database
+COPY infrastructure/scripts ./infrastructure/scripts
+
+EXPOSE 8000
+CMD ["python", "-m", "src.worker"]

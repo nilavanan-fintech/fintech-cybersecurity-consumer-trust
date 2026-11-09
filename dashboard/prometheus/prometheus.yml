@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 15s
+  external_labels:
+    project: fintech-cybersecurity-consumer-trust
+
+rule_files:
+  - /etc/prometheus/alert_rules.yml
+
+scrape_configs:
+  - job_name: worker              # research pipeline + live model scoring (src/metrics/exporter.py)
+    static_configs:
+      - targets: ["worker:8000"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: cadvisor            # per-container CPU / memory / network / disk
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]

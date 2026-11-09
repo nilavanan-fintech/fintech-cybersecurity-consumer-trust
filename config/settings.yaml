@@ -1,0 +1,81 @@
+# Central experiment configuration. Every value here is overridable through
+# the file pointed to by $FINTECH_SETTINGS. Changing `seed` changes every
+# synthetic dataset and every train/test partition deterministically.
+
+seed: 42
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  synthetic: data/synthetic
+  external: data/external
+  models: models/trained
+  evaluation: models/evaluation
+  metadata: models/model_metadata
+  figures: report/figures
+  tables: report/tables
+  survey: survey
+
+synthetic:
+  # "auto" anchors the 90-day window to the run date (so Grafana time-range
+  # filters show data). Use a fixed ISO date for bit-for-bit reproducible files.
+  end_date: auto
+  days: 90
+  n_transactions: 60000
+  n_customers: 5000
+  fraud_rate: 0.02
+  n_security_events: 25000
+  n_survey_respondents: 400
+  dirty_fraction: 0.004      # injected missing / duplicate / invalid rows (exercises validation)
+
+validation:
+  max_missing_ratio: 0.02
+  max_duplicate_ratio: 0.01
+  min_rows: 1000
+
+split:               # chronological split, no shuffling (prevents temporal leakage)
+  train: 0.70
+  validation: 0.15   # remainder is the untouched test set
+
+tuning:
+  enabled: true
+  n_iter: 8          # RandomizedSearchCV candidates per model (raise for the final report)
+  cv_folds: 3
+  scoring: average_precision
+  n_jobs: 2
+
+models:
+  logistic_regression: {enabled: true}
+  random_forest: {enabled: true}
+  xgboost: {enabled: true}
+
+anomaly:
+  contamination: 0.02
+  security_contamination: 0.15
+  lof_train_sample: 6000
+  lof_neighbors: 35
+
+risk_tiers:          # calibrated fraud probability -> action tier
+  low: 0.05
+  medium: 0.30
+  high: 0.70         # >= high -> critical
+
+trust:
+  weights:           # survey dimension weights (sum to 1)
+    perceived_security: 0.30
+    privacy_assurance: 0.20
+    transparency: 0.15
+    reliability: 0.20
+    behavioural_intent: 0.15
+  segments: {low: 50, high: 75}     # < low -> Low, >= high -> High
+  survey_weight_in_index: 0.60      # combined trust index = a*survey + (1-a)*platform security index
+  k_anonymity: 5
+
+stream:              # live replay of the held-out test set through the champion model
+  enabled: true
+  interval_seconds: 5
+  batch_size: 150
+
+exporter:
+  port: 8000

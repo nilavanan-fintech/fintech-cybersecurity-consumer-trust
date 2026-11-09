@@ -1,0 +1,26 @@
+# Core runtime dependencies (worker + notebooks). Ranges are tested together on Python 3.11-3.14.
+# Install:  pip install -r requirements.txt     (notebooks/tests: also requirements-dev.txt)
+
+# --- data & numerics ---------------------------------------------------------
+numpy>=1.26,<3            # array maths
+pandas>=2.2,<4            # dataframes
+scipy>=1.11,<2            # statistical tests (Mann-Whitney, chi-square, Spearman, ...)
+pyarrow>=15               # Parquet storage
+
+# --- machine learning ----------------------------------------------------------
+scikit-learn>=1.4,<2      # LR, Random Forest, Isolation Forest, LOF, CV/tuning, metrics
+xgboost-cpu>=2.1,<4; sys_platform == "linux"   # gradient-boosted trees (CPU build: avoids ~350 MB of NVIDIA GPU wheels in containers)
+xgboost>=2.0,<4; sys_platform != "linux"         # same library on Windows/macOS
+joblib>=1.3               # model serialisation
+
+# --- visualisation -------------------------------------------------------------
+matplotlib>=3.8,<4
+seaborn>=0.13,<1
+plotly>=5.20,<7
+tabulate>=0.9             # DataFrame.to_markdown for report tables
+
+# --- infrastructure ------------------------------------------------------------
+prometheus-client>=0.20   # /metrics exporter
+SQLAlchemy>=2.0,<3        # database access
+psycopg2-binary>=2.9      # PostgreSQL driver
+PyYAML>=6.0               # configuration

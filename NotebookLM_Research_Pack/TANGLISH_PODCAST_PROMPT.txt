@@ -1,0 +1,52 @@
+TANGLISH PODCAST PROMPT - FinTech Cybersecurity and Consumer Trust
+
+=== SHORT VERSION (paste into NotebookLM Audio Overview > Customize if there is a length limit) ===
+Make a 30-40 minute conversational educational podcast with two speakers: RAVI, a technical researcher who built this final-year project, and KAVI, a curious Tamil engineering student. Speak in natural Tanglish: Tamil written in English letters mixed with English technical terms (for example "idhu epdi work aagudhu", "false positive-nu sollrom", "model train pannum bodhu"). Keep technical words (precision, recall, PR-AUC, Docker, Prometheus, Grafana, PostgreSQL) in English. Cover, in order: introduction and problem, literature review and research gap, methodology, datasets and preprocessing, fraud detection, anomaly detection, consumer trust scoring, ML evaluation, PostgreSQL, Docker, Prometheus, Grafana, the four monthly reviews, experimental results, limitations, conclusion, and viva preparation. Use ONLY facts from the uploaded sources. Say clearly that the data and the survey are synthetic. Never invent numbers, papers, features or results; if a source does not say it, say "idhu sources-la illa". Use simple money examples (UPI payments, card swipes, a salary account) and clearly mark them as illustrative examples, not project results.
+
+=== FULL INSTRUCTIONS ===
+
+1. FORMAT
+- Length: 30-40 minutes (about 4,500-6,000 spoken words).
+- Two speakers, alternating naturally, with short reactions ("ohh", "sari", "puriyudhu", "wait wait, konjam explain pannunga").
+- RAVI = technical researcher (calm, precise, uses analogies). KAVI = curious Tamil engineering student (asks "why", repeats ideas in own words, sometimes confused, sometimes funny).
+- Begin with a 1-minute hook, end with a 3-minute recap and viva tips.
+
+2. LANGUAGE STYLE (TANGLISH)
+- Sentence structure in Tamil written in English letters; technical terms in English. Example: "Fraud detection-la main problem enna-na, fraud romba rare. 100 transactions-la 2 dhaan fraud irukkum, so accuracy-a mattum paartha misleading."
+- Keep it respectful and friendly: "nga", "paa", "da" used lightly. No Tamil script, no heavy literary Tamil.
+- Define every technical term the first time, in one simple Tanglish sentence, then use the English term.
+- Avoid long English paragraphs; avoid unexplained jargon.
+
+3. TRUTHFULNESS RULES (VERY IMPORTANT)
+- Use only information from the uploaded PDFs. Do not add outside papers, datasets, numbers or features.
+- The transactions, security events and survey are SYNTHETIC (generated with a fixed seed). Say this at least three times: early, when discussing results, and in the conclusion.
+- Quote numeric results only if they appear in document 07 or 12; mention that they come from one seed, a small tuning budget and few fraud cases in the test set.
+- Distinguish IMPLEMENTED vs PLANNED vs MISSING (document 01 verification table, documents 07, 08, 10). Missing items include: real survey data, ethics approval, Grafana screenshots, public-dataset results, psychometric validation of the Trust Index. Say so honestly.
+- Illustrative examples (UPI, card swipe) must be labelled "example", never "project result".
+- If asked something the sources do not cover, say so and suggest checking the project files.
+
+4. EPISODE OUTLINE (with approximate timing)
+ A. Intro and hook (0:00-2:30): why FinTech security and customer trust matter; UPI/card example of "app secure irundhaalum customer-ku trust illa".
+ B. Problem statement and objectives O1-O6, research questions (2:30-6:00) - doc 02.
+ C. Literature review and research gap (6:00-10:00) - doc 03: only works listed in the references; explain each theme (fraud ML, imbalance and PR curves, anomaly detection, trust models, Cronbach alpha, k-anonymity) in simple words; the gap.
+ D. Methodology (10:00-14:00) - doc 04: pipeline stages, chronological split (explain "future-la irundhu learn pannakoodadhu"), tuning, threshold on validation, metrics.
+ E. Datasets and preprocessing (14:00-18:00) - doc 06: synthetic generators, four fraud patterns, injected dirty data, 13 validation checks, cleaning, feature engineering and leakage prevention, survey privacy.
+ F. Fraud detection and anomaly detection (18:00-24:00) - doc 07: Logistic Regression, Random Forest, XGBoost, Isolation Forest, LOF in simple language; class imbalance; risk tiers; false-positive rate and customer friction with a money example.
+ G. Consumer trust scoring (24:00-27:00) - doc 08: Likert items, dimensions, reverse coding, CTS, PSI, CTI, Cronbach alpha; stress that the index is a proposal and the survey is synthetic.
+ H. PostgreSQL, Docker, Prometheus, Grafana, Loki (27:00-33:00) - doc 09: what each does, how docker compose up works, metrics from the worker, live replay of held-out data, 7 dashboards, alerts.
+ I. The four monthly reviews (33:00-36:00) - doc 11: what Review 1, 2, 3, 4 covered and how the project progressed.
+ J. Results, limitations, conclusion (36:00-38:00) - doc 12.
+ K. Viva preparation and recap (38:00-40:00) - doc 13: 5 likely questions with short Tanglish answers, the honesty checklist, demo order.
+
+5. TEACHING TECHNIQUES
+- KAVI should misunderstand at least four things and RAVI corrects them (for example: "accuracy 98%-na model super-a?" -> no, because of imbalance).
+- Use analogies: Isolation Forest = "oru crowd-la odd person-a seekiram identify pannuradhu"; chronological split = "exam-la next year paper-a munnadiye paakkama irukkanum".
+- Recap every 8-10 minutes in two sentences.
+
+6. THINGS TO AVOID
+- No invented statistics, citations, benchmarks, company names or claims that the system is deployed in production.
+- No claim that the project proves consumer behaviour in the real world.
+- No reading of code line by line; explain ideas.
+
+7. CLOSING
+End with: what is implemented, what is still planned or missing, and three practical viva tips (know the limitations, quote numbers with context, demo the dashboards in a fixed order).
